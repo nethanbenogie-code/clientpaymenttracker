@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1a1a1a; }
+header { display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; background: #fff; border-bottom: 1px solid #e3e5e8; }
+header h1 { margin: 0; font-size: 18px; }
+main { padding: 20px; }
+.view.hidden { display: none; }
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.toolbar input { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
+button { background: #2563eb; color: #fff; border: 0; padding: 8px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 14px; }
+button:hover { background: #1d4ed8; }
+button.ghost { background: #e5e7eb; color: #111; }
+.tableWrap { overflow-x: auto; background: #fff; border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid #eef0f3; text-align: left; white-space: nowrap; }
+th { background: #f9fafb; position: sticky; top: 0; }
+td.month { text-align: center; cursor: pointer; }
+td.paid { background: #d1fae5; color: #065f46; font-weight: 600; }
+td.unpaid { background: #fee2e2; color: #991b1b; }
+td.inactive { background: #f3f4f6; }
+.hint { color: #6b7280; font-size: 13px; }
+dialog { border: 0; border-radius: 10px; padding: 20px; min-width: 320px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+dialog form { display: flex; flex-direction: column; gap: 10px; }
+dialog label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
+dialog input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; }
+dialog .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+#userBar { font-size: 13px; color: #4b5563; }
+#summary { color: #4b5563; font-size: 13px; }
+.clientLink { color: #2563eb; text-decoration: none; font-weight: 600; }
+.clientLink:hover { text-decoration: underline; }
+#detailDialog { min-width: 480px; max-width: 90vw; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px;
+  margin: 10px 0; font-size: 14px; }
+.detail-table { width: 100%; margin-top: 8px; font-size: 13px; }
+.detail-table th, .detail-table td { padding: 4px 8px; border-bottom: 1px solid #eef0f3; }
+.paid-tag { color: #065f46; background: #d1fae5; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+.unpaid-tag { color: #991b1b; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+.bal-due { color: #991b1b; font-weight: 600; }
+.bal-ok { color: #065f46; font-weight: 600; }
+button.danger { background: #fecaca; color: #7f1d1d; }
+button.danger:hover { background: #fca5a5; }

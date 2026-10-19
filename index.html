@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Client Payment Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Client Payment Tracker</h1>
+  <div id="userBar"></div>
+</header>
+
+<main id="app">
+  <div id="loginView" class="view">
+    <p>Sign in with your Google account to continue.</p>
+    <p class="hint">You must be added to the <b>Users</b> tab of the sheet first.</p>
+    <button id="signInBtn">Open Tracker</button>
+  </div>
+
+  <div id="dashView" class="view hidden">
+    <div class="toolbar">
+      <button id="addBtn">+ Add Client</button>
+      <input id="search" placeholder="Search client...">
+      <span id="summary"></span>
+    </div>
+    <div class="tableWrap">
+      <table id="clientsTable"></table>
+    </div>
+  </div>
+</main>
+
+<dialog id="detailDialog">
+  <div id="detailContent"></div>
+  <div class="actions">
+    <button id="editBtn" class="ghost" type="button">Edit</button>
+    <button id="deleteBtn" class="ghost danger" type="button">Delete</button>
+    <button id="closeDetailBtn" type="button">Close</button>
+  </div>
+</dialog>
+
+<dialog id="clientDialog">
+  <form method="dialog">
+    <h3 id="dialogTitle">Add Client</h3>
+    <label>Client <input name="Client" required></label>
+    <label>Phone <input name="Phone"></label>
+    <label>Loan Amount <input name="LoanAmount" type="number" step="0.01"></label>
+    <label>Monthly <input name="Monthly" type="number" step="0.01"></label>
+    <label>Term (months, 12-24) <input name="TermMonths" type="number" min="1" max="24" value="12"></label>
+    <label>Start Date <input name="StartDate" type="date"></label>
+    <label>Notes <input name="Notes"></label>
+    <div class="actions">
+      <button value="cancel">Cancel</button>
+      <button id="saveBtn" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
