@@ -25,6 +25,8 @@
   <div id="dashView" class="view hidden">
     <div class="toolbar">
       <button id="addBtn">+ Add Client</button>
+      <button id="exportCsvBtn" class="ghost">Export CSV</button>
+      <button id="reportBtn" class="ghost">Summary Report</button>
       <input id="search" placeholder="Search client...">
       <span id="summary"></span>
     </div>
@@ -37,6 +39,7 @@
 <dialog id="detailDialog">
   <div id="detailContent"></div>
   <div class="actions">
+    <button id="statementBtn" class="ghost" type="button">Print Statement</button>
     <button id="editBtn" class="ghost" type="button">Edit</button>
     <button id="deleteBtn" class="ghost danger" type="button">Delete</button>
     <button id="closeDetailBtn" type="button">Close</button>

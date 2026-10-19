@@ -1,5 +1,5 @@
 // Paste your Apps Script Web App URL here after deploying Code.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbz2r50EiL0Vw6ubHGLp83PT-amWGsEJseXHGvggLDKrkPh3eOWn813brSn-lq9P9kgx/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzih-CKWEdQomlg9RIhQ-LA9ANAslkAzhFSd0VkaeKEMrknOk7lTTbbeoZtOabT-aj1/exec';
 
 const MONTHS = Array.from({ length: 24 }, (_, i) => 'M' + (i + 1));
 let state = { user: null, clients: [], headers: [], pw: localStorage.getItem('ct_pw') || '' };
@@ -235,5 +235,168 @@ $('#clientDialog').addEventListener('close', async (e) => {
 });
 
 $('#search').addEventListener('input', render);
+
+// ===== Export: CSV of all clients =====
+$('#exportCsvBtn').addEventListener('click', () => {
+  if (!state.clients.length) return alert('No clients to export.');
+  const cols = ['Client','Phone','LoanAmount','Monthly','TermMonths','StartDate',
+    ...MONTHS, 'Notes','PaidCount','PaidAmount','Balance'];
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [cols.join(',')];
+  state.clients.forEach(c => {
+    const term = Number(c.TermMonths) || 24;
+    const paid = MONTHS.slice(0, term).filter(m => c[m]).length;
+    const monthly = Number(c.Monthly) || 0;
+    const paidAmt = monthly * paid;
+    const balance = monthly * term - paidAmt;
+    const row = cols.map(col => {
+      if (col === 'PaidCount') return paid;
+      if (col === 'PaidAmount') return paidAmt;
+      if (col === 'Balance') return balance;
+      return c[col] ?? '';
+    });
+    lines.push(row.map(esc).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `client-tracker-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ===== Report: full summary (opens printable window) =====
+$('#reportBtn').addEventListener('click', () => {
+  const totals = state.clients.reduce((acc, c) => {
+    const term = Number(c.TermMonths) || 24;
+    const monthly = Number(c.Monthly) || 0;
+    const paid = MONTHS.slice(0, term).filter(m => c[m]).length;
+    acc.loan += Number(c.LoanAmount) || 0;
+    acc.totalDue += monthly * term;
+    acc.collected += monthly * paid;
+    acc.clients++;
+    return acc;
+  }, { loan: 0, totalDue: 0, collected: 0, clients: 0 });
+  const balance = totals.totalDue - totals.collected;
+
+  const monthlyCollection = MONTHS.map(m => {
+    const total = state.clients.reduce((s, c) => {
+      const term = Number(c.TermMonths) || 24;
+      const monthly = Number(c.Monthly) || 0;
+      const idx = MONTHS.indexOf(m);
+      if (idx >= term) return s;
+      return s + (c[m] ? monthly : 0);
+    }, 0);
+    return { month: m, total };
+  });
+
+  const clientRows = state.clients.map(c => {
+    const term = Number(c.TermMonths) || 24;
+    const monthly = Number(c.Monthly) || 0;
+    const paid = MONTHS.slice(0, term).filter(m => c[m]).length;
+    const bal = monthly * term - monthly * paid;
+    return `<tr>
+      <td>${c.Client || ''}</td>
+      <td>${c.Phone || ''}</td>
+      <td style="text-align:right">${(Number(c.LoanAmount) || 0).toLocaleString()}</td>
+      <td style="text-align:right">${monthly.toLocaleString()}</td>
+      <td style="text-align:center">${paid}/${term}</td>
+      <td style="text-align:right">${(monthly * paid).toLocaleString()}</td>
+      <td style="text-align:right ${bal > 0 ? 'color:#991b1b' : 'color:#065f46'}">${bal.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  const monthRows = monthlyCollection.map(m => `
+    <tr><td>${m.month}</td><td style="text-align:right">${m.total.toLocaleString()}</td></tr>
+  `).join('');
+
+  openPrintWindow(`
+    <h1>Payment Summary Report</h1>
+    <p>Generated ${new Date().toLocaleString()}</p>
+    <div class="totals">
+      <div><b>Clients:</b> ${totals.clients}</div>
+      <div><b>Total Loaned:</b> ${totals.loan.toLocaleString()}</div>
+      <div><b>Total Due:</b> ${totals.totalDue.toLocaleString()}</div>
+      <div><b>Collected:</b> ${totals.collected.toLocaleString()}</div>
+      <div><b>Outstanding Balance:</b> ${balance.toLocaleString()}</div>
+    </div>
+    <h2>Per Client</h2>
+    <table>
+      <thead><tr><th>Client</th><th>Phone</th><th>Loan</th><th>Monthly</th><th>Paid</th><th>Collected</th><th>Balance</th></tr></thead>
+      <tbody>${clientRows}</tbody>
+    </table>
+    <h2>Collection by Month</h2>
+    <table style="max-width:300px">
+      <thead><tr><th>Month</th><th>Collected</th></tr></thead>
+      <tbody>${monthRows}</tbody>
+    </table>
+  `);
+});
+
+// ===== Report: per-client statement =====
+$('#statementBtn').addEventListener('click', () => {
+  const c = state.clients.find(x => x._row === currentDetailRow);
+  if (!c) return;
+  const term = Number(c.TermMonths) || 24;
+  const activeMonths = MONTHS.slice(0, term);
+  const monthly = Number(c.Monthly) || 0;
+  const paid = activeMonths.filter(m => c[m]);
+  const totalDue = monthly * term;
+  const paidAmount = monthly * paid.length;
+  const balance = totalDue - paidAmount;
+
+  const rows = activeMonths.map((m, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${m}</td>
+      <td style="text-align:right">${monthly.toLocaleString()}</td>
+      <td>${c[m] ? 'PAID' : 'DUE'}</td>
+      <td>${c[m] || ''}</td>
+    </tr>`).join('');
+
+  openPrintWindow(`
+    <h1>Payment Statement</h1>
+    <p>Issued ${new Date().toLocaleString()}</p>
+    <div class="totals">
+      <div><b>Client:</b> ${c.Client || ''}</div>
+      <div><b>Phone:</b> ${c.Phone || '—'}</div>
+      <div><b>Start Date:</b> ${c.StartDate || '—'}</div>
+      <div><b>Loan Amount:</b> ${(Number(c.LoanAmount) || 0).toLocaleString()}</div>
+      <div><b>Monthly Payment:</b> ${monthly.toLocaleString()}</div>
+      <div><b>Term:</b> ${term} months</div>
+      <div><b>Total Due:</b> ${totalDue.toLocaleString()}</div>
+      <div><b>Paid So Far:</b> ${paidAmount.toLocaleString()} (${paid.length} of ${term} months)</div>
+      <div><b>Outstanding Balance:</b> <span style="color:${balance > 0 ? '#991b1b' : '#065f46'}">${balance.toLocaleString()}</span></div>
+    </div>
+    <h2>Schedule</h2>
+    <table>
+      <thead><tr><th>#</th><th>Month</th><th>Amount</th><th>Status</th><th>Paid On</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${c.Notes ? `<p><b>Notes:</b> ${c.Notes}</p>` : ''}
+  `);
+});
+
+function openPrintWindow(bodyHtml) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8">
+    <title>Report</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 30px; color: #1a1a1a; }
+      h1 { margin: 0 0 4px; }
+      h2 { margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+      .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px;
+        background: #f6f7f9; padding: 14px; border-radius: 8px; margin: 14px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+      th, td { padding: 6px 10px; border-bottom: 1px solid #eef0f3; text-align: left; }
+      th { background: #f3f4f6; }
+      @media print { button { display: none; } }
+    </style></head><body>
+    <button onclick="window.print()" style="float:right;padding:8px 14px;cursor:pointer;background:#2563eb;color:#fff;border:0;border-radius:6px">Print / Save PDF</button>
+    ${bodyHtml}
+    </body></html>`);
+  w.document.close();
+}
 
 load();
