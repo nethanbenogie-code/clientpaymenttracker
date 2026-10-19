@@ -14,9 +14,12 @@
 
 <main id="app">
   <div id="loginView" class="view">
-    <p>Sign in with your Google account to continue.</p>
-    <p class="hint">You must be added to the <b>Users</b> tab of the sheet first.</p>
-    <button id="signInBtn">Open Tracker</button>
+    <form id="loginForm">
+      <h2>Sign in</h2>
+      <p class="hint" id="loginMsg">Enter your access password.</p>
+      <input id="pwInput" type="password" placeholder="Password" autofocus>
+      <button type="submit">Open Tracker</button>
+    </form>
   </div>
 
   <div id="dashView" class="view hidden">

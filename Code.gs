@@ -3,30 +3,26 @@
 // =====================================================
 // Deploy: Extensions > Apps Script > paste this > Deploy > Web app
 //   Execute as: Me
-//   Who has access: Anyone with Google account
+//   Who has access: Anyone
 // Copy the Web App URL into app.js (API_URL).
 // =====================================================
 
-const SHEET_ID = ''; // leave blank if script is bound to the sheet
+// CHANGE THESE TWO PASSWORDS before deploying.
+// Give the admin password only to yourself.
+// Give the viewer password to anyone who needs read-only access.
+const ADMIN_PASSWORD  = 'change-this-admin-password';
+const VIEWER_PASSWORD = 'change-this-viewer-password';
+
 const CLIENTS_TAB = 'Clients';
-const USERS_TAB = 'Users';
 const LOG_TAB = 'Log';
 
 function getSheet_(name) {
-  const ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(name);
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
 }
 
-function getCurrentUser_() {
-  const email = Session.getActiveUser().getEmail();
-  if (!email) return null;
-  const sheet = getSheet_(USERS_TAB);
-  const rows = sheet.getDataRange().getValues();
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).toLowerCase() === email.toLowerCase() && rows[i][2] === true) {
-      return { email: rows[i][0], role: rows[i][1] };
-    }
-  }
+function authRole_(password) {
+  if (password === ADMIN_PASSWORD) return 'admin';
+  if (password === VIEWER_PASSWORD) return 'viewer';
   return null;
 }
 
@@ -37,12 +33,12 @@ function json_(obj) {
 }
 
 function doGet(e) {
-  const user = getCurrentUser_();
-  if (!user) return json_({ ok: false, error: 'unauthorized' });
+  const role = authRole_(e.parameter.pw);
+  if (!role) return json_({ ok: false, error: 'unauthorized' });
 
   const action = (e.parameter.action || 'list').toLowerCase();
 
-  if (action === 'me') return json_({ ok: true, user });
+  if (action === 'me') return json_({ ok: true, user: { role } });
 
   if (action === 'list') {
     const sheet = getSheet_(CLIENTS_TAB);
@@ -53,18 +49,18 @@ function doGet(e) {
       headers.forEach((h, j) => obj[h] = r[j]);
       return obj;
     });
-    return json_({ ok: true, headers, clients, user });
+    return json_({ ok: true, headers, clients, user: { role } });
   }
 
   return json_({ ok: false, error: 'unknown action' });
 }
 
 function doPost(e) {
-  const user = getCurrentUser_();
-  if (!user) return json_({ ok: false, error: 'unauthorized' });
-  if (user.role !== 'admin') return json_({ ok: false, error: 'forbidden' });
-
   const body = JSON.parse(e.postData.contents || '{}');
+  const role = authRole_(body.pw);
+  if (!role) return json_({ ok: false, error: 'unauthorized' });
+  if (role !== 'admin') return json_({ ok: false, error: 'forbidden' });
+
   const action = (body.action || '').toLowerCase();
   const sheet = getSheet_(CLIENTS_TAB);
 
@@ -72,7 +68,7 @@ function doPost(e) {
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const row = headers.map(h => body.client[h] ?? '');
     sheet.appendRow(row);
-    log_(user.email, 'add_client', body.client.Client || '');
+    log_(role, 'add_client', body.client.Client || '');
     return json_({ ok: true });
   }
 
@@ -81,7 +77,7 @@ function doPost(e) {
     const colIndex = headers.indexOf(body.month);
     if (colIndex < 0) return json_({ ok: false, error: 'bad month' });
     sheet.getRange(body.row, colIndex + 1).setValue(body.value);
-    log_(user.email, 'mark_payment', `row=${body.row} ${body.month}=${body.value}`);
+    log_(role, 'mark_payment', `row=${body.row} ${body.month}=${body.value}`);
     return json_({ ok: true });
   }
 
@@ -89,22 +85,22 @@ function doPost(e) {
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const row = headers.map(h => body.client[h] ?? '');
     sheet.getRange(body.row, 1, 1, row.length).setValues([row]);
-    log_(user.email, 'update_client', `row=${body.row}`);
+    log_(role, 'update_client', `row=${body.row}`);
     return json_({ ok: true });
   }
 
   if (action === 'delete_client') {
     sheet.deleteRow(body.row);
-    log_(user.email, 'delete_client', `row=${body.row}`);
+    log_(role, 'delete_client', `row=${body.row}`);
     return json_({ ok: true });
   }
 
   return json_({ ok: false, error: 'unknown action' });
 }
 
-function log_(email, action, detail) {
+function log_(role, action, detail) {
   const sheet = getSheet_(LOG_TAB);
-  if (sheet) sheet.appendRow([new Date(), email, action, detail]);
+  if (sheet) sheet.appendRow([new Date(), role, action, detail]);
 }
 
 // Run once to create the sheet tabs with headers
@@ -117,13 +113,8 @@ function setupSheets() {
     s.appendRow(['Client','Phone','LoanAmount','Monthly','TermMonths','StartDate',
       ...months, 'Notes']);
   }
-  if (!ss.getSheetByName(USERS_TAB)) {
-    const s = ss.insertSheet(USERS_TAB);
-    s.appendRow(['Email','Role','Active']);
-    s.appendRow([Session.getActiveUser().getEmail(), 'admin', true]);
-  }
   if (!ss.getSheetByName(LOG_TAB)) {
     const s = ss.insertSheet(LOG_TAB);
-    s.appendRow(['Timestamp','User','Action','Detail']);
+    s.appendRow(['Timestamp','Role','Action','Detail']);
   }
 }

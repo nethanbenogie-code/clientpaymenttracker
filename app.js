@@ -1,32 +1,36 @@
 // Paste your Apps Script Web App URL here after deploying Code.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbz2r50EiL0Vw6ubHGLp83PT-amWGsEJseXHGvggLDKrkPh3eOWn813brSn-lq9P9kgx/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzih-CKWEdQomlg9RIhQ-LA9ANAslkAzhFSd0VkaeKEMrknOk7lTTbbeoZtOabT-aj1/exec';
 
 const MONTHS = Array.from({ length: 24 }, (_, i) => 'M' + (i + 1));
-let state = { user: null, clients: [], headers: [] };
+let state = { user: null, clients: [], headers: [], pw: localStorage.getItem('ct_pw') || '' };
 
 const $ = sel => document.querySelector(sel);
 
 async function api(action, body) {
   if (!body) {
-    const url = `${API_URL}?action=${encodeURIComponent(action)}`;
-    const r = await fetch(url, { credentials: 'include' });
+    const url = `${API_URL}?action=${encodeURIComponent(action)}&pw=${encodeURIComponent(state.pw)}`;
+    const r = await fetch(url);
     return r.json();
   }
   const r = await fetch(API_URL, {
     method: 'POST',
-    body: JSON.stringify({ action, ...body }),
+    body: JSON.stringify({ action, pw: state.pw, ...body }),
     headers: { 'Content-Type': 'text/plain' }, // avoid CORS preflight
   });
   return r.json();
 }
 
 async function load() {
+  if (!state.pw) {
+    showLogin();
+    return;
+  }
   const res = await api('list');
   if (!res.ok) {
     if (res.error === 'unauthorized') {
-      // Not signed in or not in Users tab
-      $('#loginView').classList.remove('hidden');
-      $('#dashView').classList.add('hidden');
+      localStorage.removeItem('ct_pw');
+      state.pw = '';
+      showLogin('Wrong password. Try again.');
       return;
     }
     alert('Error: ' + res.error);
@@ -37,8 +41,20 @@ async function load() {
   state.clients = res.clients;
   $('#loginView').classList.add('hidden');
   $('#dashView').classList.remove('hidden');
-  $('#userBar').textContent = `${state.user.email} (${state.user.role})`;
+  $('#userBar').innerHTML = `${state.user.role} <a href="#" id="logoutBtn">(sign out)</a>`;
+  $('#logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('ct_pw');
+    state.pw = '';
+    location.reload();
+  });
   render();
+}
+
+function showLogin(msg) {
+  $('#loginView').classList.remove('hidden');
+  $('#dashView').classList.add('hidden');
+  if (msg) $('#loginMsg').textContent = msg;
 }
 
 function render() {
@@ -106,7 +122,6 @@ function openDetail(row) {
   const term = Number(c.TermMonths) || 24;
   const activeMonths = MONTHS.slice(0, term);
   const paid = activeMonths.filter(m => c[m]);
-  const unpaid = activeMonths.filter(m => !c[m]);
   const loan = Number(c.LoanAmount) || 0;
   const monthly = Number(c.Monthly) || 0;
   const totalDue = monthly * term;
@@ -169,10 +184,14 @@ $('#deleteBtn').addEventListener('click', async () => {
   await load();
 });
 
-$('#signInBtn').addEventListener('click', () => {
-  // Opening the Apps Script URL once triggers Google sign-in in that domain
-  window.open(API_URL + '?action=me', '_blank');
-  setTimeout(load, 1500);
+$('#loginForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const pw = $('#pwInput').value;
+  if (!pw) return;
+  state.pw = pw;
+  localStorage.setItem('ct_pw', pw);
+  $('#pwInput').value = '';
+  load();
 });
 
 $('#addBtn').addEventListener('click', () => {
