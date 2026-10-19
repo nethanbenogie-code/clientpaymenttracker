@@ -49,3 +49,6 @@ button.danger:hover { background: #fca5a5; }
 #loginForm input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
 #userBar a { color: #2563eb; margin-left: 8px; text-decoration: none; }
 #userBar a:hover { text-decoration: underline; }
+.hint.info { color: #1d4ed8; }
+.hint.ok { color: #065f46; }
+.hint.err { color: #991b1b; }

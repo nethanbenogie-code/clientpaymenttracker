@@ -184,14 +184,31 @@ $('#deleteBtn').addEventListener('click', async () => {
   await load();
 });
 
-$('#loginForm').addEventListener('submit', e => {
+$('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const pw = $('#pwInput').value;
   if (!pw) return;
   state.pw = pw;
-  localStorage.setItem('ct_pw', pw);
-  $('#pwInput').value = '';
-  load();
+  $('#loginMsg').textContent = 'Checking password with Google Sheets...';
+  $('#loginMsg').className = 'hint info';
+  try {
+    const res = await api('me');
+    if (res.ok) {
+      localStorage.setItem('ct_pw', pw);
+      $('#loginMsg').textContent = `Success — signed in as ${res.user.role}`;
+      $('#loginMsg').className = 'hint ok';
+      $('#pwInput').value = '';
+      setTimeout(load, 400);
+    } else {
+      $('#loginMsg').textContent = `Wrong password (server responded: ${res.error})`;
+      $('#loginMsg').className = 'hint err';
+      state.pw = '';
+    }
+  } catch (err) {
+    $('#loginMsg').textContent = `Could not reach Google Sheets: ${err.message}`;
+    $('#loginMsg').className = 'hint err';
+    state.pw = '';
+  }
 });
 
 $('#addBtn').addEventListener('click', () => {
