@@ -1,5 +1,5 @@
 // Paste your Apps Script Web App URL here after deploying Code.gs
-const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzih-CKWEdQomlg9RIhQ-LA9ANAslkAzhFSd0VkaeKEMrknOk7lTTbbeoZtOabT-aj1/exec';
 
 const MONTHS = Array.from({ length: 24 }, (_, i) => 'M' + (i + 1));
 let state = { user: null, clients: [], headers: [] };
